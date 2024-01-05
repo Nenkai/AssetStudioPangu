@@ -3,6 +3,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using ImpromptuNinjas.ZStd;
+
 namespace AssetStudio
 {
     [Flags]
@@ -28,7 +30,8 @@ namespace AssetStudio
         Lzma,
         Lz4,
         Lz4HC,
-        Lzham
+        Lzham,
+        Zstd
     }
 
     public class BundleFile
@@ -280,6 +283,17 @@ namespace AssetStudio
                         blocksInfoUncompresseddStream = new MemoryStream(uncompressedBytes);
                         break;
                     }
+                // Support: Pangu Unity Revelation Mobile
+                case CompressionType.Zstd:
+                    {
+                        var uncompressedBytes = new byte[uncompressedSize];
+
+                        var dec = new ZStdDecompressor();
+                        dec.Decompress(uncompressedBytes, blocksInfoBytes);
+
+                        blocksInfoUncompresseddStream = new MemoryStream(uncompressedBytes);
+                    }
+                    break;
                 default:
                     throw new IOException($"Unsupported compression type {compressionType}");
             }
@@ -355,6 +369,31 @@ namespace AssetStudio
                             BigArrayPool<byte>.Shared.Return(uncompressedBytes);
                             break;
                         }
+                    // Support: Pangu Unity Revelation Mobile
+                    case CompressionType.Zstd:
+                        {
+                            var compressedSize = (int)blockInfo.compressedSize;
+                            var compressedBytes = BigArrayPool<byte>.Shared.Rent(compressedSize);
+
+                            reader.Read(compressedBytes, 0, compressedSize);
+
+                            var uncompressedSize = (int)blockInfo.uncompressedSize;
+                            var uncompressedBytes = BigArrayPool<byte>.Shared.Rent(uncompressedSize);
+
+                            var dec = new ZStdDecompressor();
+                            int numWrite = (int)dec.Decompress(uncompressedBytes.AsSpan(0, uncompressedSize), compressedBytes.AsSpan(0, compressedSize));
+                            if (numWrite != uncompressedSize)
+                            {
+                                throw new IOException($"Lz4 decompression error, write {numWrite} bytes but expected {uncompressedSize} bytes");
+                            }
+
+                            blocksStream.Write(uncompressedBytes, 0, uncompressedSize);
+                            BigArrayPool<byte>.Shared.Return(compressedBytes);
+                            BigArrayPool<byte>.Shared.Return(uncompressedBytes);
+                            
+                            break;
+                        }
+
                     default:
                         throw new IOException($"Unsupported compression type {compressionType}");
                 }

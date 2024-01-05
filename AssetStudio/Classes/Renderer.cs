@@ -93,6 +93,9 @@ namespace AssetStudio
                 var m_LightmapTilingOffsetDynamic = reader.ReadVector4();
             }
 
+            // Hackfix: Pangu Unity Revelation Mobile - ADDED: Unknown vec4
+            var unk = reader.ReadVector4();
+
             var m_MaterialsSize = reader.ReadInt32();
             m_Materials = new PPtr<Material>[m_MaterialsSize];
             for (int i = 0; i < m_MaterialsSize; i++)
