@@ -1,3 +1,11 @@
+# Fork of the maintained fork for Netease Pangu Assets
+
+* Fixes: Bundle compression '5' isn't supported (Zstd).
+* Fixes Texture2D asset reading
+* Fixes Renderer asset reading
+
+---
+
 - [README 中文](./README_zh.md)
 - [README English](./README.md)
 
